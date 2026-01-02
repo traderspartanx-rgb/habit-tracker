@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tracker - Black Theme</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        body { background: #f4f6f5; font-family: Arial, sans-serif; color: #000; padding: 20px; }
+        
+        .excel-card { background: #e9efec; border: 1px solid #aaa; border-radius: 8px; display: flex; flex-direction: column; overflow: hidden; }
+        .header-black { background: #cfd8d4; font-weight: 700; padding: 6px; border-bottom: 1px solid #aaa; text-align: center; }
+        .inspiration-text { font-size: 24px; font-weight: 800; line-height: 1.2; }
+        .start-date { cursor: pointer; display: inline-block; }
+        .calendar-input { display: none; margin-top: 6px; font-size: 11px; padding: 4px; border-radius: 6px; border: 1px solid #aaa; }
+
+        /* HABIT TABLE */
+        .habit-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        .habit-table th, .habit-table td { border: 1px solid #aaa; padding: 6px; text-align: center; }
+        .habit-table th { background: #cfd8d4; font-weight: 700; }
+        
+        /* Black Progress Bar */
+        .progress-cell { width: 60px; padding: 6px 4px !important; }
+        .progress-bg { background: #d1d5d3; width: 100%; height: 14px; border-radius: 2px; }
+        .progress-fill { background: #000; height: 100%; transition: width 0.3s; }
+        .pct-text { font-weight: 800; width: 40px; text-align: right !important; }
+
+        /* Black Checkbox for Habit Table */
+        .habit-checkbox { width: 16px; height: 16px; border: 2px solid #000; appearance: none; cursor: pointer; position: relative; vertical-align: middle; }
+        .habit-checkbox:checked { background: #000; }
+        .habit-checkbox:checked::after { content: ''; position: absolute; left: 4px; top: 1px; width: 4px; height: 8px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+
+        .habit-delete { width: 8px; height: 8px; display: inline-block; position: relative; cursor: pointer; margin-right: 6px; opacity: 0; }
+        tr:hover .habit-delete { opacity: 1; }
+        .habit-delete::before, .habit-delete::after { content: ''; position: absolute; top: 0; left: 3px; width: 1px; height: 8px; background: #000; }
+        .habit-delete::before { transform: rotate(45deg); }
+        .habit-delete::after { transform: rotate(-45deg); }
+        .add-habit-bar { padding: 6px 8px; background: #cfd8d4; display: flex; gap: 6px; align-items: center; }
+        .add-habit-bar input { padding: 6px 8px; font-size: 11px; height: 28px; }
+        .add-btn { background: #000; color: #fff; padding: 5px 14px; border-radius: 20px; font-size: 11px; font-weight: 700; height: 28px; }
+
+        /* DAILY CARDS */
+        .day-grid-container { display: grid; grid-template-columns: repeat(7, 1fr); gap: 12px; margin-top: 30px; }
+        .premium-day-card { background: #fff; border: 1px solid #aaa; border-radius: 6px; display: flex; flex-direction: column; min-height: 520px; position: relative; }
+        .premium-day-header { background: #000; color: #fff; padding: 10px 6px; text-align: center; font-weight: 800; font-size: 13px; cursor: pointer; transition: background 0.2s; }
+        .premium-day-header:hover { background: #222; }
+        
+        .hidden-calendar-grid { 
+            display: none; 
+            position: absolute; 
+            top: 45px; 
+            left: 50%; 
+            transform: translateX(-50%); 
+            z-index: 50; 
+            background: white; 
+            border: 1px solid #aaa; 
+            padding: 5px; 
+            border-radius: 4px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .circle-container-box { background: #f0f2f1; margin: 10px; border-radius: 8px; height: 180px; display: flex; align-items: center; justify-content: center; position: relative; }
+        .canvas-wrapper { width: 140px; height: 140px; position: relative; }
+        .percentage-label { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 900; }
+
+        .tasks-header-bar { background: #333; color: #fff; text-align: center; font-size: 11px; font-weight: 800; padding: 6px; }
+        .tasks-scroll-area { flex-grow: 1; overflow-y: auto; max-height: 200px; }
+        .task-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-bottom: 1px solid #eee; font-size: 13px; font-weight: 700; }
+        .task-row.done { background: #d1d5d3; }
+        .task-row.done .task-text { text-decoration: line-through; color: #555; }
+        .task-text { flex: 1; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .premium-checkbox { width: 16px; height: 16px; border: 2px solid #000; appearance: none; cursor: pointer; position: relative; }
+        .premium-checkbox:checked { background: #000; }
+        .premium-checkbox:checked::after { content: ''; position: absolute; left: 4px; top: 1px; width: 4px; height: 8px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+        .delete-btn { width: 7px; height: 7px; position: relative; cursor: pointer; opacity: 0; }
+        .task-row:hover .delete-btn { opacity: 1; }
+        .delete-btn::before, .delete-btn::after { content: ''; position: absolute; top: 0; left: 3px; width: 1px; height: 7px; background: #000; }
+        .delete-btn::before { transform: rotate(45deg); }
+        .delete-btn::after { transform: rotate(-45deg); }
+        .add-task-input { border: none; width: 100%; padding: 12px; font-size: 10px; font-weight: 800; border-top: 1px solid #aaa; outline: none; background: #fff; }
+    </style>
+</head>
+<body>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+        <div class="lg:col-span-3 excel-card p-6 justify-between bg-[#dde3e0]">
+            <div class="text-center my-auto">
+                <h1 class="inspiration-text">Inspiration comes only<br>during work</h1>
+            </div>
+            <div class="mt-4 text-center">
+                <span id="startLabel" class="bg-black text-white px-3 py-1 rounded-full text-[10px] font-bold start-date">
+                    Start: <span id="startDateText">02-11-2025</span>
+                </span>
+                <input type="date" id="calendarInput" class="calendar-input">
+            </div>
+        </div>
+
+        <div class="lg:col-span-4 excel-card">
+            <div class="header-black">Overall Progress</div>
+            <div class="p-4 flex justify-between items-center">
+                <div class="w-2/3 h-56"><canvas id="barChart"></canvas></div>
+                <div class="w-1/3 flex flex-col items-center gap-4">
+                    <div class="relative">
+                        <canvas id="doneDonut" width="100" height="100"></canvas>
+                        <div id="doneText" class="absolute inset-0 flex items-center justify-center font-bold">0%</div>
+                    </div>
+                    <div class="relative">
+                        <canvas id="notDoneDonut" width="100" height="100"></canvas>
+                        <div id="notDoneText" class="absolute inset-0 flex items-center justify-center font-bold">0%</div>
+                    </div>
+                    <p id="statsText" class="text-[10px] font-bold">0 / 0 DONE</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="lg:col-span-5 excel-card">
+            <div class="header-black">My Habit Tracker</div>
+            <table class="habit-table">
+                <thead>
+                    <tr>
+                        <th class="text-left">Habit</th>
+                        <th>S</th><th>M</th><th>T</th><th>W</th><th>T</th><th>F</th><th>S</th>
+                        <th colspan="2">Progress</th>
+                    </tr>
+                </thead>
+                <tbody id="habitRows"></tbody>
+            </table>
+            <div class="add-habit-bar">
+                <input id="newHabitName" class="flex-grow font-bold" placeholder="Type new habit...">
+                <button onclick="addHabit()" class="add-btn">+ ADD</button>
+            </div>
+        </div>
+    </div>
+
+    <hr class="my-10 border-gray-400">
+
+    <div class="day-grid-container" id="dayGrid"></div>
+
+    <script>
+        const startLabel = document.getElementById('startLabel');
+        const calendarInput = document.getElementById('calendarInput');
+        const startDateText = document.getElementById('startDateText');
+        startLabel.onclick = () => { calendarInput.style.display = 'block'; calendarInput.focus(); };
+        calendarInput.onchange = () => {
+            const d = new Date(calendarInput.value);
+            startDateText.innerText = `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`;
+            calendarInput.style.display = 'none';
+            setBaseDate(calendarInput.value);
+        };
+
+        let habits = JSON.parse(localStorage.getItem("habits")) || [{name: "Exercise", checks: [0,0,0,0,0,0,0]}];
+        
+        function renderHabits() {
+            const tbody = document.getElementById('habitRows'); 
+            tbody.innerHTML = '';
+            habits.forEach((h, i) => {
+                const doneCount = h.checks.filter(Boolean).length;
+                const percentage = Math.round(doneCount / 7 * 100);
+                
+                let row = `<tr>
+                    <td class="text-left font-bold"><span class="habit-delete" onclick="deleteHabit(${i})"></span>${h.name}</td>`;
+                
+                h.checks.forEach((c, d) => { 
+                    row += `<td><input type="checkbox" class="habit-checkbox" ${c ? 'checked' : ''} onchange="toggleCheck(${i}, ${d})"></td>` 
+                });
+
+                row += `
+                    <td class="progress-cell">
+                        <div class="progress-bg">
+                            <div class="progress-fill" style="width: ${percentage}%"></div>
+                        </div>
+                    </td>
+                    <td class="pct-text">${percentage}%</td>
+                </tr>`;
+                
+                tbody.innerHTML += row;
+            });
+            localStorage.setItem("habits", JSON.stringify(habits));
+        }
+
+        function toggleCheck(h, d) { habits[h].checks[d] ^= 1; renderHabits(); }
+        function addHabit() { const n = document.getElementById('newHabitName'); if (n.value.trim()) { habits.push({ name: n.value, checks:[0,0,0,0,0,0,0] }); n.value=''; renderHabits(); } }
+        function deleteHabit(i) { habits.splice(i,1); renderHabits(); }
+
+        let barChart, doneDonut, notDoneDonut;
+        function initTopCharts() {
+            barChart = new Chart(document.getElementById('barChart').getContext('2d'), {
+                type: 'bar',
+                data: { labels: ['S', 'M', 'T', 'W', 'T', 'F', 'S'], datasets: [{ backgroundColor: '#000', data: [] }, { backgroundColor: '#ccc', data: [] }] },
+                options: { responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true }, y: { stacked: false, beginAtZero: true } }, plugins: { legend: { display: false } } }
+            });
+            const cfg = (ctx, colors) => new Chart(ctx, { type: 'doughnut', data: { datasets: [{ data: [0, 100], backgroundColor: colors, borderWidth: 0 }] }, options: { cutout: '75%', plugins: { tooltip: false } } });
+            doneDonut = cfg(document.getElementById('doneDonut').getContext('2d'), ['#000', '#ddd']);
+            notDoneDonut = cfg(document.getElementById('notDoneDonut').getContext('2d'), ['#ccc', '#eee']);
+        }
+
+        let gridCharts = {};
+        let gridData = JSON.parse(localStorage.getItem("taskData")) || {0:[], 1:[], 2:[], 3:[], 4:[], 5:[], 6:[]};
+        let baseDate = localStorage.getItem("baseDate") || "";
+
+        function initGrid() {
+            const grid = document.getElementById("dayGrid"); grid.innerHTML = "";
+            const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+            
+            for (let i = 0; i < 7; i++) {
+                let dayLabel = "Day", dateLabel = "--";
+                if (baseDate) {
+                    const d = new Date(baseDate); d.setDate(d.getDate() + i);
+                    dayLabel = dayNames[d.getDay()]; dateLabel = d.toLocaleDateString();
+                }
+                const card = document.createElement("div");
+                card.className = "premium-day-card";
+                card.innerHTML = `
+                    <div class="premium-day-header" onclick="toggleCardCalendar(${i})">
+                        ${dayLabel}<br><small>${dateLabel}</small>
+                    </div>
+                    <input type="date" id="grid-cal-${i}" class="hidden-calendar-grid" onchange="setBaseDate(this.value)">
+                    <div class="circle-container-box">
+                        <div class="canvas-wrapper">
+                            <canvas id="chart-${i}"></canvas>
+                            <div class="percentage-label" id="pct-${i}">0%</div>
+                        </div>
+                    </div>
+                    <div class="tasks-header-bar">TASKS</div>
+                    <div class="tasks-scroll-area" id="tasks-${i}"></div>
+                    <input class="add-task-input" placeholder="+ ADD TASK" onkeydown="addTask(event,${i})">
+                `;
+                grid.appendChild(card);
+                gridCharts[i] = new Chart(document.getElementById(`chart-${i}`).getContext('2d'), {
+                    type: "doughnut",
+                    data: { datasets: [{ data: [0, 100], backgroundColor: ["#000", "#ddd"], borderWidth: 0 }] },
+                    options: { cutout: "80%", responsive: true, maintainAspectRatio: false, plugins: { tooltip: false } }
+                });
+                gridData[i].forEach(t => renderTaskUI(i, t.text, t.done));
+                updateCardProgress(i);
+            }
+            updateOverallProgress();
+        }
+
+        function toggleCardCalendar(i) {
+            const cal = document.getElementById(`grid-cal-${i}`);
+            document.querySelectorAll('.hidden-calendar-grid').forEach(c => { if(c !== cal) c.style.display = 'none'; });
+            cal.style.display = (cal.style.display === 'block') ? 'none' : 'block';
+            if(cal.style.display === 'block') cal.focus();
+        }
+
+        function setBaseDate(v) { 
+            baseDate = v; localStorage.setItem("baseDate", v); 
+            const d = new Date(v);
+            startDateText.innerText = `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`;
+            initGrid(); 
+        }
+
+        function renderTaskUI(i, text, done) {
+            const row = document.createElement("div");
+            row.className = "task-row" + (done ? " done" : "");
+            row.innerHTML = `<div class="delete-btn" onclick="deleteTask(this,${i})"></div><span class="task-text">${text}</span><input type="checkbox" class="premium-checkbox" ${done?"checked":""} onchange="toggleTask(this,${i})">`;
+            document.getElementById(`tasks-${i}`).appendChild(row);
+        }
+
+        function addTask(e, i) {
+            if (e.key === "Enter" && e.target.value.trim()) {
+                gridData[i].push({ text: e.target.value, done: false });
+                renderTaskUI(i, e.target.value, false);
+                e.target.value = ""; saveAll(); updateCardProgress(i);
+            }
+        }
+
+        function toggleTask(cb, i) {
+            const idx = [...cb.parentElement.parentElement.children].indexOf(cb.parentElement);
+            gridData[i][idx].done = cb.checked;
+            cb.parentElement.classList.toggle("done", cb.checked);
+            saveAll(); updateCardProgress(i);
+        }
+
+        function deleteTask(btn, i) {
+            const idx = [...btn.parentElement.parentElement.children].indexOf(btn.parentElement);
+            gridData[i].splice(idx, 1);
+            btn.parentElement.remove(); saveAll(); updateCardProgress(i);
+        }
+
+        function saveAll() { localStorage.setItem("taskData", JSON.stringify(gridData)); updateOverallProgress(); }
+
+        function updateCardProgress(i) {
+            const total = gridData[i].length, done = gridData[i].filter(t=>t.done).length;
+            const pct = total ? Math.round(done/total*100) : 0;
+            document.getElementById(`pct-${i}`).innerText = pct + "%";
+            gridCharts[i].data.datasets[0].data = [pct, 100 - pct];
+            gridCharts[i].update();
+        }
+
+        function updateOverallProgress() {
+            let doneDay = [], totalDay = [], gTotal = 0, gDone = 0;
+            for(let i=0; i<7; i++) {
+                const t = gridData[i].length, d = gridData[i].filter(x=>x.done).length;
+                doneDay.push(d); totalDay.push(t); gTotal+=t; gDone+=d;
+            }
+            barChart.data.datasets[0].data = doneDay; 
+            barChart.data.datasets[1].data = totalDay; 
+            barChart.update();
+            const pct = gTotal ? Math.round(gDone/gTotal*100) : 0;
+            doneDonut.data.datasets[0].data = [pct, 100-pct];
+            notDoneDonut.data.datasets[0].data = [100-pct, pct];
+            doneDonut.update(); notDoneDonut.update();
+            document.getElementById('doneText').innerText = pct+"%";
+            document.getElementById('notDoneText').innerText = (100-pct)+"%";
+            document.getElementById('statsText').innerText = `${gDone} / ${gTotal} DONE`;
+        }
+
+        initTopCharts(); renderHabits(); initGrid();
+    </script>
+</body>
+</html>
